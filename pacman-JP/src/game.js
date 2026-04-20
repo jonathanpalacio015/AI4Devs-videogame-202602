@@ -243,8 +243,8 @@ export class Game {
     this.player.update(dt, this);
     this.consumeCollectibles();
 
+    const baseAggression = this.getAggressionFactor();
     for (const ghost of this.ghosts) {
-      const baseAggression = this.getAggressionFactor();
       const slowFactor = this.ghostSlowTimer > 0 ? 0.66 : 1;
 
       if (ghost.mode !== "regenerating") {

@@ -13,11 +13,13 @@ function bfsNextDirection(start, target, game) {
   }
 
   const queue = [start];
+  let queueIndex = 0;
   const visited = new Set([keyFromPoint(start)]);
   const parent = new Map();
 
-  while (queue.length > 0) {
-    const current = queue.shift();
+  while (queueIndex < queue.length) {
+    const current = queue[queueIndex];
+    queueIndex += 1;
 
     if (current.x === target.x && current.y === target.y) {
       let trace = keyFromPoint(current);
@@ -53,24 +55,44 @@ function bfsNextDirection(start, target, game) {
 }
 
 export class Ghost {
-  constructor(spawn, color, id) {
+  constructor(spawn, profile, house) {
     this.spawn = { ...spawn };
     this.x = spawn.x;
     this.y = spawn.y;
+    this.house = { ...house };
     this.dir = choice(CARDINALS);
     this.baseSpeed = 4.1;
     this.speed = this.baseSpeed;
-    this.color = color;
-    this.id = id;
-    this.repathInterval = 0.18;
+    this.color = profile.color;
+    this.id = profile.id;
+    this.role = profile.role;
+    this.name = profile.name;
+    this.scatterTarget = { ...profile.scatterTarget };
+    this.mode = "normal";
+    this.repathInterval = 0.28;
     this.repathClock = Math.random() * this.repathInterval;
   }
 
   reset() {
     this.x = this.spawn.x;
     this.y = this.spawn.y;
+    this.mode = "normal";
     this.dir = choice(CARDINALS);
     this.repathClock = Math.random() * this.repathInterval;
+  }
+
+  setMode(mode) {
+    if (this.mode !== "regenerating") {
+      this.mode = mode;
+    }
+  }
+
+  startRegeneration() {
+    this.mode = "regenerating";
+  }
+
+  finishRegeneration(nextMode = "normal") {
+    this.mode = nextMode;
   }
 
   isCentered() {
@@ -84,7 +106,7 @@ export class Ghost {
   chooseDirection(game) {
     const start = this.getTile();
     const target = game.getGhostTarget(this, start);
-    const routeDir = bfsNextDirection(start, target, game);
+    const routeDir = target ? bfsNextDirection(start, target, game) : null;
 
     if (routeDir && game.canMoveTile(start, routeDir)) {
       return routeDir;
