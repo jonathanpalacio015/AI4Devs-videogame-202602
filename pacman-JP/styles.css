@@ -189,7 +189,7 @@ h1 {
 .hud {
   padding: 0.7rem 0.9rem;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.7rem;
 }
 
@@ -210,6 +210,16 @@ h1 {
 .hud-item strong {
   font-family: "Orbitron", sans-serif;
   color: var(--cyan);
+}
+
+.timer-urgent {
+  color: #ff4f5e !important;
+  animation: timer-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes timer-pulse {
+  from { opacity: 1; }
+  to   { opacity: 0.4; }
 }
 
 .game-wrap {

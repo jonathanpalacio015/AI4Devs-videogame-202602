@@ -31,6 +31,8 @@ export class Game {
     this.difficultyFactor = 1;
     this.currentPlayer = "Anon";
     this.elapsed = 0;
+    this.stageTimeLimit = 120;
+    this.stageTimeRemaining = 120;
 
     this.grid = [];
     this.powerUps = [];
@@ -50,6 +52,7 @@ export class Game {
     this.lastTick = 0;
     this.cellPx = 756 / BOARD_SIZE; // Fixed: buffer is always 756x756
     this.loopRunning = false; // guard against multiple RAF loops
+
     this.deathAnim = null;  // { timer, x, y }
     this.victoryAnim = null; // { timer }
     this.lastRenderTimestamp = 0;
@@ -95,8 +98,17 @@ export class Game {
     this.frightTimer = 0;
     this.shieldTimer = 0;
     this.hitCooldown = 0;
+    this.stageTimeLimit = this.getStageTimeLimit(level);
+    this.stageTimeRemaining = this.stageTimeLimit;
 
     this.updateHud();
+  }
+
+  getStageTimeLimit(level) {
+    const baseTimes = [120, 100, 85];
+    const base = baseTimes[Math.min(level - 1, baseTimes.length - 1)];
+    const diffFactor = this.difficulty === "easy" ? 1.4 : this.difficulty === "hard" ? 0.7 : 1.0;
+    return Math.round(base * diffFactor);
   }
 
   setDifficulty(mode = "normal") {
@@ -207,6 +219,11 @@ export class Game {
 
   update(dt) {
     this.elapsed += dt;
+    this.stageTimeRemaining = Math.max(0, this.stageTimeRemaining - dt);
+    if (this.stageTimeRemaining <= 0) {
+      this.handleTimeOut();
+      return;
+    }
 
     if (this.input.consumePause()) {
       this.pauseToggle();
@@ -495,6 +512,14 @@ export class Game {
     }
   }
 
+  handleTimeOut() {
+    this.statusText = "¡Tiempo agotado!";
+    this.handlePlayerHit();
+    if (this.lives > 0) {
+      this.stageTimeRemaining = this.getStageTimeLimit(this.level);
+    }
+  }
+
   handlePlayerHit() {
     this.lives -= 1;
     this.ui.flash("lose");
@@ -610,6 +635,7 @@ export class Game {
       status,
       bestScore: this.getBestScore(),
       levelProgress: this.getLevelProgress(),
+      timeRemaining: this.stageTimeRemaining,
     });
   }
 

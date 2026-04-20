@@ -5,6 +5,7 @@ export class UISystem {
     this.levelValue = document.getElementById("levelValue");
     this.statusValue = document.getElementById("statusValue");
     this.bestValue = document.getElementById("bestValue");
+    this.timerValue = document.getElementById("timerValue");
     this.progressValue = document.getElementById("progressValue");
     this.progressFill = document.getElementById("progressFill");
     this.progressTrack = document.querySelector(".progress-track");
@@ -16,12 +17,17 @@ export class UISystem {
     this.gameWrap = document.querySelector(".game-wrap");
   }
 
-  updateHUD({ score, lives, level, status, bestScore = 0, levelProgress = 0 }) {
+  updateHUD({ score, lives, level, status, bestScore = 0, levelProgress = 0, timeRemaining = 0 }) {
     this.scoreValue.textContent = String(score);
     this.livesValue.textContent = String(lives);
     this.levelValue.textContent = String(level);
     this.statusValue.textContent = status;
     this.bestValue.textContent = String(bestScore);
+
+    const mins = Math.floor(timeRemaining / 60);
+    const secs = Math.floor(timeRemaining % 60);
+    this.timerValue.textContent = `${mins}:${String(secs).padStart(2, "0")}`;
+    this.timerValue.classList.toggle("timer-urgent", timeRemaining > 0 && timeRemaining <= 10);
 
     const progress = Math.max(0, Math.min(100, Math.round(levelProgress * 100)));
     this.progressValue.textContent = `${progress}%`;

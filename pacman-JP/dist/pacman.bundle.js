@@ -431,6 +431,8 @@
       this.difficultyFactor = 1;
       this.currentPlayer = "Anon";
       this.elapsed = 0;
+      this.stageTimeLimit = 120;
+      this.stageTimeRemaining = 120;
       this.grid = [];
       this.powerUps = [];
       this.pelletRemaining = 0;
@@ -483,7 +485,15 @@
       this.frightTimer = 0;
       this.shieldTimer = 0;
       this.hitCooldown = 0;
+      this.stageTimeLimit = this.getStageTimeLimit(level);
+      this.stageTimeRemaining = this.stageTimeLimit;
       this.updateHud();
+    }
+    getStageTimeLimit(level) {
+      const baseTimes = [120, 100, 85];
+      const base = baseTimes[Math.min(level - 1, baseTimes.length - 1)];
+      const diffFactor = this.difficulty === "easy" ? 1.4 : this.difficulty === "hard" ? 0.7 : 1;
+      return Math.round(base * diffFactor);
     }
     setDifficulty(mode = "normal") {
       const normalized = ["easy", "normal", "hard"].includes(mode) ? mode : "normal";
@@ -576,6 +586,11 @@
     }
     update(dt) {
       this.elapsed += dt;
+      this.stageTimeRemaining = Math.max(0, this.stageTimeRemaining - dt);
+      if (this.stageTimeRemaining <= 0) {
+        this.handleTimeOut();
+        return;
+      }
       if (this.input.consumePause()) {
         this.pauseToggle();
         return;
@@ -822,6 +837,13 @@
         return;
       }
     }
+    handleTimeOut() {
+      this.statusText = "\xA1Tiempo agotado!";
+      this.handlePlayerHit();
+      if (this.lives > 0) {
+        this.stageTimeRemaining = this.getStageTimeLimit(this.level);
+      }
+    }
     handlePlayerHit() {
       this.lives -= 1;
       this.ui.flash("lose");
@@ -920,7 +942,8 @@
         level: this.level,
         status,
         bestScore: this.getBestScore(),
-        levelProgress: this.getLevelProgress()
+        levelProgress: this.getLevelProgress(),
+        timeRemaining: this.stageTimeRemaining
       });
     }
     drawTile(x, y, color, alpha = 1) {
@@ -1238,6 +1261,7 @@
       this.levelValue = document.getElementById("levelValue");
       this.statusValue = document.getElementById("statusValue");
       this.bestValue = document.getElementById("bestValue");
+      this.timerValue = document.getElementById("timerValue");
       this.progressValue = document.getElementById("progressValue");
       this.progressFill = document.getElementById("progressFill");
       this.progressTrack = document.querySelector(".progress-track");
@@ -1248,12 +1272,16 @@
       this.overlayButton = document.getElementById("overlayButton");
       this.gameWrap = document.querySelector(".game-wrap");
     }
-    updateHUD({ score, lives, level, status, bestScore = 0, levelProgress = 0 }) {
+    updateHUD({ score, lives, level, status, bestScore = 0, levelProgress = 0, timeRemaining = 0 }) {
       this.scoreValue.textContent = String(score);
       this.livesValue.textContent = String(lives);
       this.levelValue.textContent = String(level);
       this.statusValue.textContent = status;
       this.bestValue.textContent = String(bestScore);
+      const mins = Math.floor(timeRemaining / 60);
+      const secs = Math.floor(timeRemaining % 60);
+      this.timerValue.textContent = `${mins}:${String(secs).padStart(2, "0")}`;
+      this.timerValue.classList.toggle("timer-urgent", timeRemaining > 0 && timeRemaining <= 10);
       const progress = Math.max(0, Math.min(100, Math.round(levelProgress * 100)));
       this.progressValue.textContent = `${progress}%`;
       this.progressFill.style.width = `${progress}%`;
