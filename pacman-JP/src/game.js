@@ -13,10 +13,8 @@ const GHOST_PROFILES = [
 
 export class Game {
   constructor({ canvas, ui, audio, input, getBestScore = () => 0, onRunEnd = () => {} }) {
-    console.log("[NeonRush] Game constructor started");
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
-    console.log("[NeonRush] Canvas context:", this.ctx ? "OK" : "FAIL");
     this.ui = ui;
     this.audio = audio;
     this.input = input;
@@ -51,28 +49,15 @@ export class Game {
 
     this.lastTick = 0;
     this.cellPx = 756 / BOARD_SIZE; // Fixed: buffer is always 756x756
-    this.resizeObserver = null;
+    this.loopRunning = false; // guard against multiple RAF loops
+    this.deathAnim = null;  // { timer, x, y }
+    this.victoryAnim = null; // { timer }
 
-    this.resize();
-    window.addEventListener("resize", () => this.resize());
-    window.addEventListener("orientationchange", () => {
-      setTimeout(() => this.resize(), 100);
-    });
-    if (window.ResizeObserver) {
-      this.resizeObserver = new ResizeObserver(() => this.resize());
-      this.resizeObserver.observe(this.canvas);
-      if (this.canvas.parentElement) {
-        this.resizeObserver.observe(this.canvas.parentElement);
-      }
-    }
     // Fixed 756x756 buffer – never changed so the canvas is never cleared by resize.
     this.canvas.width = 756;
     this.canvas.height = 756;
-    console.log("[NeonRush] Canvas buffer set to 756x756");
     this.setupLevel(this.level);
-    console.log("[NeonRush] Level setup complete, rendering...");
     this.render();
-    console.log("[NeonRush] Constructor complete, game ready");
   }
 
   /** Returns the CSS display side-length of the canvas in pixels. */
@@ -128,6 +113,13 @@ export class Game {
     this.statusText = "En juego";
     this.audio.ensure();
     this.updateHud();
+    this.ensureLoop();
+  }
+
+  ensureLoop() {
+    if (this.loopRunning) return;
+    this.loopRunning = true;
+    this.lastTick = 0;
     requestAnimationFrame((ts) => this.loop(ts));
   }
 
@@ -138,31 +130,35 @@ export class Game {
     } else if (this.state === "paused") {
       this.state = "running";
       this.statusText = "En juego";
-      requestAnimationFrame((ts) => this.loop(ts));
+      // loop keeps running; it checks state each frame
     }
     this.updateHud();
   }
 
   loop(timestamp) {
     try {
-      if (this.state !== "running") {
-        this.render();
-        requestAnimationFrame((ts) => this.loop(ts));
-        return;
-      }
-
-      if (!this.lastTick) {
-        this.lastTick = timestamp;
-      }
-
-      const dt = clamp((timestamp - this.lastTick) / 1000, 0, 0.04);
-      this.lastTick = timestamp;
-
-      this.update(dt);
       this.render();
+
+      if (this.state === "running") {
+        if (!this.lastTick) this.lastTick = timestamp;
+        const dt = clamp((timestamp - this.lastTick) / 1000, 0, 0.04);
+        this.lastTick = timestamp;
+        this.update(dt);
+      } else {
+        this.lastTick = timestamp; // keep lastTick current so no huge dt spike on resume
+      }
+
+      // Animate death/victory overlays
+      if (this.deathAnim) {
+        this.deathAnim.timer -= 1;
+        if (this.deathAnim.timer <= 0) this.deathAnim = null;
+      }
+      if (this.victoryAnim) {
+        this.victoryAnim.timer -= 1;
+        if (this.victoryAnim.timer <= 0) this.victoryAnim = null;
+      }
     } catch (err) {
       console.error("[NeonRush] loop error:", err);
-      // Draw error visibly on canvas
       try {
         this.ctx.fillStyle = "#1a0000";
         this.ctx.fillRect(0, 0, 756, 80);
@@ -170,8 +166,8 @@ export class Game {
         this.ctx.font = "bold 14px monospace";
         this.ctx.fillText("ERROR: " + err.message, 10, 30);
         this.ctx.font = "11px monospace";
-        const stack = (err.stack || "").split("\n").slice(1, 3);
-        stack.forEach((line, i) => this.ctx.fillText(line.trim(), 10, 50 + i * 16));
+        (err.stack || "").split("\n").slice(1, 3).forEach((l, i) =>
+          this.ctx.fillText(l.trim(), 10, 50 + i * 16));
       } catch (_) {}
     }
     requestAnimationFrame((ts) => this.loop(ts));
@@ -234,6 +230,7 @@ export class Game {
     if (this.level >= this.maxMvpLevel) {
       this.state = "victory";
       this.statusText = "Victoria";
+      this.victoryAnim = { timer: 120 };
       this.audio.victory();
       this.ui.showOverlay({
         title: "Victoria Neon",
@@ -256,9 +253,9 @@ export class Game {
       onClick: () => {
         this.setupLevel(this.level);
         this.state = "running";
-        this.lastTick = 0;
+        this.ui.hideOverlay();
         this.updateHud();
-        requestAnimationFrame((ts) => this.loop(ts));
+        // loop already running via ensureLoop
       },
     });
   }
@@ -268,14 +265,15 @@ export class Game {
     this.lives = 3;
     this.level = 1;
     this.elapsed = 0;
-    this.resize();
+    this.deathAnim = null;
+    this.victoryAnim = null;
     this.setupLevel(this.level);
     this.state = "running";
-    this.lastTick = 0;
     this.ui.hideOverlay();
     this.render();
     this.updateHud();
-    requestAnimationFrame((ts) => this.loop(ts));
+    this.audio.ensure();
+    this.ensureLoop();
   }
 
   isWalkable(x, y) {
@@ -470,6 +468,8 @@ export class Game {
     this.ui.flash("lose");
     this.audio.hit();
     this.hitCooldown = 1;
+    // Death animation: Pac-Man shrinks at current position
+    this.deathAnim = { timer: 50, x: this.player.x, y: this.player.y };
 
     if (this.lives <= 0) {
       this.state = "gameover";
@@ -702,7 +702,34 @@ export class Game {
 
   render() {
     this.renderBoard();
-    this.renderPlayer();
-    this.renderGhosts();
+    if (this.player) {
+      if (!this.deathAnim) {
+        this.renderPlayer();
+      } else {
+        // Death animation: Pac-Man shrinks and closes mouth
+        const progress = 1 - this.deathAnim.timer / 50;
+        const cx = (this.deathAnim.x + 0.5) * this.cellPx;
+        const cy = (this.deathAnim.y + 0.5) * this.cellPx;
+        const radius = this.cellPx * 0.36 * (1 - progress);
+        if (radius > 0) {
+          this.ctx.fillStyle = "#ffd447";
+          this.ctx.beginPath();
+          const angle = progress * Math.PI;
+          this.ctx.moveTo(cx, cy);
+          this.ctx.arc(cx, cy, radius, angle, Math.PI * 2 - angle);
+          this.ctx.closePath();
+          this.ctx.fill();
+        }
+      }
+    }
+    if (this.ghosts && this.ghosts.length) this.renderGhosts();
+    // Victory flash: bright overlay that fades
+    if (this.victoryAnim) {
+      const alpha = this.victoryAnim.timer / 120 * 0.45;
+      this.ctx.fillStyle = `rgba(153,255,127,${alpha})`;
+      this.ctx.fillRect(0, 0, 756, 756);
+    }
+  }
+    }
   }
 }

@@ -27,6 +27,24 @@ export class InputSystem {
       });
     }
 
+    // Swipe gesture support
+    let touchStartX = 0;
+    let touchStartY = 0;
+    window.addEventListener("touchstart", (e) => {
+      touchStartX = e.changedTouches[0].clientX;
+      touchStartY = e.changedTouches[0].clientY;
+    }, { passive: true });
+    window.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        this.currentDir = dx > 0 ? "right" : "left";
+      } else {
+        this.currentDir = dy > 0 ? "down" : "up";
+      }
+    }, { passive: true });
+
     if (pauseBtn) {
       pauseBtn.addEventListener("click", () => {
         this.pauseRequested = true;
