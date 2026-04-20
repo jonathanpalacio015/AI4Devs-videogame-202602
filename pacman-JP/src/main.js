@@ -22,6 +22,7 @@ const ui = new UISystem();
 const audio = new AudioSystem();
 const input = new InputSystem();
 const leaderboard = new LeaderboardSystem(5);
+const DIAG_MODE = new URLSearchParams(window.location.search).get("diag") === "1";
 
 let game = null;
 let started = false;
@@ -30,6 +31,10 @@ let startAttempts = 0;
 let lastError = "none";
 
 function createDiagPanel() {
+  if (!DIAG_MODE) {
+    return null;
+  }
+
   const panel = document.createElement("aside");
   panel.id = "diagPanel";
   panel.setAttribute("aria-live", "polite");
@@ -66,7 +71,7 @@ function getSnapshot() {
 }
 
 function paintDiag(reason = "tick") {
-  if (!diagPanel) return;
+  if (!DIAG_MODE || !diagPanel) return;
   const s = getSnapshot();
   const menuVisible = menu ? !menu.classList.contains("hidden") : false;
   diagPanel.textContent = [
@@ -81,16 +86,18 @@ function paintDiag(reason = "tick") {
   ].join("\n");
 }
 
-window.addEventListener("error", (event) => {
-  lastError = `${event.message} @${event.filename}:${event.lineno}`;
-  paintDiag("window.error");
-});
+if (DIAG_MODE) {
+  window.addEventListener("error", (event) => {
+    lastError = `${event.message} @${event.filename}:${event.lineno}`;
+    paintDiag("window.error");
+  });
 
-window.addEventListener("unhandledrejection", (event) => {
-  const reason = event.reason?.message || String(event.reason);
-  lastError = `promise: ${reason}`;
-  paintDiag("unhandledrejection");
-});
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason?.message || String(event.reason);
+    lastError = `promise: ${reason}`;
+    paintDiag("unhandledrejection");
+  });
+}
 
 function setMenuNotice(message = "", tone = "error") {
   if (!menuNotice) {
@@ -182,18 +189,21 @@ function openHowToPlay(event) {
 window.__pacmanStart = startGame;
 window.__pacmanHow = openHowToPlay;
 
-document.addEventListener("pointerdown", () => {
-  clickCount += 1;
-  paintDiag("pointerdown");
-}, { capture: true });
+if (DIAG_MODE) {
+  document.addEventListener("pointerdown", () => {
+    clickCount += 1;
+    paintDiag("pointerdown");
+  }, { capture: true });
+}
 
 input.bind({ mobileRoot: mobileControls, pauseBtn });
 ui.renderLeaderboard(leaderboard.getAll());
 
 if (startBtn) {
   startBtn.addEventListener("click", startGame);
-  startBtn.addEventListener("pointerup", startGame);
-  startBtn.addEventListener("pointerdown", () => paintDiag("startBtn.pointerdown"));
+  if (DIAG_MODE) {
+    startBtn.addEventListener("pointerdown", () => paintDiag("startBtn.pointerdown"));
+  }
 }
 
 playerNameInput.addEventListener("keydown", (event) => {
@@ -210,8 +220,9 @@ difficultySelect.addEventListener("keydown", (event) => {
 
 if (howBtn) {
   howBtn.addEventListener("click", openHowToPlay);
-  howBtn.addEventListener("pointerup", openHowToPlay);
-  howBtn.addEventListener("pointerdown", () => paintDiag("howBtn.pointerdown"));
+  if (DIAG_MODE) {
+    howBtn.addEventListener("pointerdown", () => paintDiag("howBtn.pointerdown"));
+  }
 }
 
 if (closeHelpBtn) {
@@ -248,4 +259,6 @@ setTimeout(() => {
   }
 }, 1200);
 
-setInterval(() => paintDiag("heartbeat"), 500);
+if (DIAG_MODE) {
+  setInterval(() => paintDiag("heartbeat"), 1000);
+}
