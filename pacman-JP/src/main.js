@@ -243,7 +243,7 @@ setMenuNotice("Pulsa 'Jugar ahora' para cargar el laberinto.", "info");
 
 try {
   ensureGame();
-  setMenuNotice("Pulsa 'Jugar ahora'. Si no responde, el juego iniciará automáticamente.", "info");
+  setMenuNotice("Pulsa 'Jugar ahora' para iniciar la partida.", "info");
   paintDiag("preload.success");
 } catch (error) {
   console.error("[NeonRush] preload error:", error);
@@ -251,13 +251,6 @@ try {
   lastError = error?.stack || error?.message || String(error);
   paintDiag("preload.error");
 }
-
-// Fallback: if the menu is still visible after a short delay, auto-start the run.
-setTimeout(() => {
-  if (!started && menu && !menu.classList.contains("hidden")) {
-    startGame();
-  }
-}, 1200);
 
 if (DIAG_MODE) {
   setInterval(() => paintDiag("heartbeat"), 1000);

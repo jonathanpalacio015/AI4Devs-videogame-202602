@@ -54,6 +54,7 @@ export class Game {
     this.victoryAnim = null; // { timer }
     this.frameCount = 0;
     this.lastRenderTimestamp = 0;
+    this.idleLoopDelayMs = 90;
 
     // Fixed 756x756 buffer – never changed so the canvas is never cleared by resize.
     this.canvas.width = 756;
@@ -176,7 +177,19 @@ export class Game {
           this.ctx.fillText(l.trim(), 10, 50 + i * 16));
       } catch (_) {}
     }
-    requestAnimationFrame((ts) => this.loop(ts));
+    this.scheduleNextLoop();
+  }
+
+  scheduleNextLoop() {
+    if (this.state === "running") {
+      requestAnimationFrame((ts) => this.loop(ts));
+      return;
+    }
+
+    // When idle (menu/pause/gameover/victory), avoid a hot RAF loop.
+    setTimeout(() => {
+      requestAnimationFrame((ts) => this.loop(ts));
+    }, this.idleLoopDelayMs);
   }
 
   shouldRender(timestamp) {
