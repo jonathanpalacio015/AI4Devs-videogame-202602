@@ -68,6 +68,7 @@ export class Game {
 
     if (this.grid.length > 0) {
       this.cellPx = cssSize / this.grid.length;
+      this.render();
     }
   }
 
@@ -81,7 +82,8 @@ export class Game {
     this.player = new Player(data.playerSpawn);
     this.ghosts = data.ghostSpawns.map((spawn, idx) => new Ghost(spawn, GHOST_COLORS[idx % GHOST_COLORS.length], idx));
 
-    this.cellPx = (this.canvas.clientWidth || 756) / this.grid.length;
+    const cssSize = Math.min(this.canvas.clientWidth || 756, this.canvas.clientHeight || 756);
+    this.cellPx = cssSize / this.grid.length;
     this.statusText = `En juego (${this.difficulty})`;
     this.ghostSlowTimer = 0;
     this.frightTimer = 0;
@@ -125,6 +127,7 @@ export class Game {
   loop(timestamp) {
     if (this.state !== "running") {
       this.render();
+      requestAnimationFrame((ts) => this.loop(ts));
       return;
     }
 
@@ -474,7 +477,8 @@ export class Game {
 
   renderBoard() {
     const size = this.grid.length;
-    this.ctx.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+    const side = size * this.cellPx;
+    this.ctx.clearRect(0, 0, side, side);
 
     for (let y = 0; y < size; y += 1) {
       for (let x = 0; x < size; x += 1) {
