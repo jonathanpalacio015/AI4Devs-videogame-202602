@@ -13,13 +13,59 @@
 <body>
   <div class="bg-grid" aria-hidden="true"></div>
 
-  <main class="app-shell">
-    <header class="hero">
-      <p class="tag">Retro-futurista • HTML5 Canvas • Mobile Ready</p>
-      <h1>Sir-pac</h1>
-      <p class="subtitle">Conserva la nostalgia del clásico y añade IA adaptable, power-ups tácticos y niveles procedurales.</p>
-    </header>
+  <!-- ░░ Fixed top bar — always visible ░░ -->
+  <nav class="top-bar" aria-label="Barra de juego">
+    <span class="top-bar__brand">Sir-pac</span>
+    <div class="top-bar__live">
+      <div class="tb-pill">
+        <span>Puntaje</span>
+        <strong id="scoreValue">0</strong>
+      </div>
+      <div class="tb-pill">
+        <span>Tiempo</span>
+        <strong id="timerValue">2:00</strong>
+      </div>
+    </div>
+    <div class="top-bar__actions">
+      <button id="statsToggleBtn" type="button" class="btn btn-secondary btn-sm"
+              aria-expanded="false" aria-controls="statsDrawer">≡ Stats</button>
+      <button id="pauseBtn" type="button" class="btn btn-secondary btn-sm">⏸ Pausa</button>
+    </div>
+  </nav>
 
+  <!-- ░░ Collapsible stats drawer ░░ -->
+  <aside id="statsDrawer" class="stats-drawer" aria-label="Panel de estadísticas" aria-hidden="true">
+    <div class="stats-drawer__inner">
+      <div class="drawer-hud">
+        <div class="hud-item"><span>Vidas</span><strong id="livesValue">3</strong></div>
+        <div class="hud-item"><span>Nivel</span><strong id="levelValue">1</strong></div>
+        <div class="hud-item"><span>Estado</span><strong id="statusValue">Preparado</strong></div>
+        <div class="hud-item"><span>Top local</span><strong id="bestValue">0</strong></div>
+      </div>
+      <section class="progress panel drawer-progress" aria-label="Progreso del nivel">
+        <div class="progress-head">
+          <span>Limpieza del nivel</span>
+          <strong id="progressValue">0%</strong>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="Progreso del nivel"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </section>
+      <section class="leaderboard panel drawer-leaderboard" aria-label="Ranking local">
+        <div class="leaderboard-head">
+          <h2>Top 5 local</h2>
+          <button id="clearRankingBtn" type="button" class="btn btn-secondary btn-sm">Limpiar</button>
+        </div>
+        <ol id="leaderboardList" class="leaderboard-list"></ol>
+      </section>
+    </div>
+  </aside>
+
+  <!-- Click-outside backdrop for the drawer -->
+  <div id="statsBackdrop" class="stats-backdrop" hidden></div>
+
+  <main class="game-shell">
     <section id="menu" class="panel menu-panel" aria-label="Menú principal">
       <div class="menu-copy">
         <h2>Listo para entrar al laberinto</h2>
@@ -51,33 +97,6 @@
       </div>
     </section>
 
-    <section class="game-bottom panel" aria-label="Estadísticas de partida">
-      <div class="gb-stat gb-score">
-        <span>Puntaje</span>
-        <strong id="scoreValue">0</strong>
-      </div>
-      <div class="gb-mini">
-        <div class="hud-item"><span>Vidas</span><strong id="livesValue">3</strong></div>
-        <div class="hud-item"><span>Nivel</span><strong id="levelValue">1</strong></div>
-        <div class="hud-item"><span>Estado</span><strong id="statusValue">Preparado</strong></div>
-        <div class="hud-item"><span>Top local</span><strong id="bestValue">0</strong></div>
-      </div>
-      <div class="gb-stat gb-timer">
-        <span>Tiempo</span>
-        <strong id="timerValue">2:00</strong>
-      </div>
-    </section>
-
-    <section class="progress panel" aria-label="Progreso del nivel">
-      <div class="progress-head">
-        <span>Limpieza del nivel</span>
-        <strong id="progressValue">0%</strong>
-      </div>
-      <div class="progress-track" role="progressbar" aria-label="Progreso del nivel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <div id="progressFill" class="progress-fill"></div>
-      </div>
-    </section>
-
     <section id="mobileControls" class="mobile-controls panel" aria-label="Controles táctiles">
       <button class="ctrl up" data-dir="up">▲</button>
       <div class="mid-row">
@@ -85,7 +104,6 @@
         <button class="ctrl down" data-dir="down">▼</button>
         <button class="ctrl right" data-dir="right">▶</button>
       </div>
-      <button id="pauseBtn" type="button" class="btn btn-secondary">Pausa</button>
     </section>
 
     <section id="helpPanel" class="help panel hidden" aria-label="Instrucciones">
@@ -99,16 +117,32 @@
       </ul>
       <button id="closeHelpBtn" type="button" class="btn btn-secondary">Cerrar</button>
     </section>
-
-    <section class="leaderboard panel" aria-label="Ranking local">
-      <div class="leaderboard-head">
-        <h2>Top 5 local</h2>
-        <button id="clearRankingBtn" type="button" class="btn btn-secondary">Limpiar</button>
-      </div>
-      <ol id="leaderboardList" class="leaderboard-list"></ol>
-    </section>
   </main>
 
+  <script>
+    // Stats drawer toggle (runs before game bootstrap)
+    (function () {
+      var btn = document.getElementById("statsToggleBtn");
+      var drawer = document.getElementById("statsDrawer");
+      var backdrop = document.getElementById("statsBackdrop");
+      function openDrawer() {
+        drawer.classList.add("open");
+        backdrop.hidden = false;
+        btn.setAttribute("aria-expanded", "true");
+        drawer.setAttribute("aria-hidden", "false");
+      }
+      function closeDrawer() {
+        drawer.classList.remove("open");
+        backdrop.hidden = true;
+        btn.setAttribute("aria-expanded", "false");
+        drawer.setAttribute("aria-hidden", "true");
+      }
+      btn.addEventListener("click", function () {
+        drawer.classList.contains("open") ? closeDrawer() : openDrawer();
+      });
+      backdrop.addEventListener("click", closeDrawer);
+    })();
+  </script>
   <script>
     // file:// uses the bundled script (no ES module imports).
     // http(s) keeps development mode with native modules.
