@@ -1,4 +1,4 @@
-# Pac-Man Neon Rush (MVP)
+# Sir-pac (MVP)
 
 Prototipo moderno del clásico Pac-Man, construido para navegador con enfoque retro-futurista, rendimiento fluido y base modular para escalar.
 
@@ -54,7 +54,7 @@ Estructura modular:
 2. Ejecución por servidor local (recomendado para desarrollo):
   - `python -m http.server 8080`
   - abre `http://localhost:8080/pacman-JP/`
-3. También puedes entrar al índice principal `index.html` y seleccionar Pac-Man Neon Rush.
+3. También puedes entrar al índice principal `index.html` y seleccionar Sir-pac.
 
 ## Verificación de funcionamiento y responsividad
 

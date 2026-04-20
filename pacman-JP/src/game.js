@@ -266,7 +266,7 @@ export class Game {
       this.audio.victory();
       this.ui.showOverlay({
         title: "Victoria Neon",
-        text: "Superaste el MVP de Pac-Man Neon Rush. Puedes reiniciar para un nuevo laberinto procedural.",
+        text: "Superaste el MVP de Sir-pac. Puedes reiniciar para un nuevo laberinto procedural.",
         buttonText: "Reiniciar",
         onClick: () => this.restart(),
       });
