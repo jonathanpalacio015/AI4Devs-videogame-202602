@@ -115,6 +115,27 @@
     </section>
   </main>
 
+  <script>
+    // Fallback for file:// execution: ES modules may be blocked by browser security.
+    if (window.location.protocol === "file:") {
+      const fileModeMsg = "Este juego debe abrirse por http://localhost (no file:///). Ejecuta un servidor local y abre /pacman-JP/.";
+      const notice = document.getElementById("menuNotice");
+      if (notice) {
+        notice.textContent = fileModeMsg;
+        notice.classList.remove("hidden");
+      }
+
+      window.__pacmanStart = (event) => {
+        event?.preventDefault();
+        alert(fileModeMsg);
+      };
+
+      window.__pacmanHow = (event) => {
+        event?.preventDefault();
+        alert(fileModeMsg + "\n\nURL esperada: http://localhost:8080/pacman-JP/");
+      };
+    }
+  </script>
   <script type="module" src="src/main.js?v=20260420"></script>
 </body>
 </html>
