@@ -49,8 +49,12 @@ Estructura modular:
 
 ## Cómo ejecutarlo localmente
 
-1. Abre `pacman-JP/index.html` en navegador moderno.
-2. O entra al índice principal `index.html` y selecciona Pac-Man Neon Rush.
+1. Ejecución directa (sin servidor): abre `pacman-JP/index.html` con doble clic.
+  - En modo `file:///`, el juego carga `dist/pacman.bundle.js` (incluido en el repo).
+2. Ejecución por servidor local (recomendado para desarrollo):
+  - `python -m http.server 8080`
+  - abre `http://localhost:8080/pacman-JP/`
+3. También puedes entrar al índice principal `index.html` y seleccionar Pac-Man Neon Rush.
 
 ## Verificación de funcionamiento y responsividad
 
