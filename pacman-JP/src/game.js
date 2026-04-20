@@ -162,6 +162,17 @@ export class Game {
       this.render();
     } catch (err) {
       console.error("[NeonRush] loop error:", err);
+      // Draw error visibly on canvas
+      try {
+        this.ctx.fillStyle = "#1a0000";
+        this.ctx.fillRect(0, 0, 756, 80);
+        this.ctx.fillStyle = "#ff4f5e";
+        this.ctx.font = "bold 14px monospace";
+        this.ctx.fillText("ERROR: " + err.message, 10, 30);
+        this.ctx.font = "11px monospace";
+        const stack = (err.stack || "").split("\n").slice(1, 3);
+        stack.forEach((line, i) => this.ctx.fillText(line.trim(), 10, 50 + i * 16));
+      } catch (_) {}
     }
     requestAnimationFrame((ts) => this.loop(ts));
   }
