@@ -13,8 +13,10 @@ const GHOST_PROFILES = [
 
 export class Game {
   constructor({ canvas, ui, audio, input, getBestScore = () => 0, onRunEnd = () => {} }) {
+    console.log("[NeonRush] Game constructor started");
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
+    console.log("[NeonRush] Canvas context:", this.ctx ? "OK" : "FAIL");
     this.ui = ui;
     this.audio = audio;
     this.input = input;
@@ -66,8 +68,11 @@ export class Game {
     // Fixed 756x756 buffer – never changed so the canvas is never cleared by resize.
     this.canvas.width = 756;
     this.canvas.height = 756;
+    console.log("[NeonRush] Canvas buffer set to 756x756");
     this.setupLevel(this.level);
+    console.log("[NeonRush] Level setup complete, rendering...");
     this.render();
+    console.log("[NeonRush] Constructor complete, game ready");
   }
 
   /** Returns the CSS display side-length of the canvas in pixels. */
@@ -576,8 +581,8 @@ export class Game {
   renderBoard() {
     this.ctx.clearRect(0, 0, 756, 756);
 
-    for (let y = 0; y < size; y += 1) {
-      for (let x = 0; x < size; x += 1) {
+    for (let y = 0; y < BOARD_SIZE; y += 1) {
+      for (let x = 0; x < BOARD_SIZE; x += 1) {
         const cell = this.grid[y][x];
         if (cell === TILE.WALL) {
           this.drawTile(x, y, "#102848");
