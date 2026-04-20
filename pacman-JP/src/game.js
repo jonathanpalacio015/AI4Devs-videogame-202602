@@ -52,6 +52,7 @@ export class Game {
     this.loopRunning = false; // guard against multiple RAF loops
     this.deathAnim = null;  // { timer, x, y }
     this.victoryAnim = null; // { timer }
+    this.frameCount = 0;
 
     // Fixed 756x756 buffer – never changed so the canvas is never cleared by resize.
     this.canvas.width = 756;
@@ -137,6 +138,7 @@ export class Game {
 
   loop(timestamp) {
     try {
+      this.frameCount += 1;
       this.render();
 
       if (this.state === "running") {
@@ -171,6 +173,19 @@ export class Game {
       } catch (_) {}
     }
     requestAnimationFrame((ts) => this.loop(ts));
+  }
+
+  getDebugSnapshot() {
+    return {
+      state: this.state,
+      statusText: this.statusText,
+      playerReady: Boolean(this.player),
+      ghostCount: this.ghosts?.length || 0,
+      loopRunning: this.loopRunning,
+      frameCount: this.frameCount,
+      level: this.level,
+      score: this.score,
+    };
   }
 
   update(dt) {
