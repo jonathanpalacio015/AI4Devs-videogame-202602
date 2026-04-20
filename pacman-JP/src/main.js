@@ -16,6 +16,7 @@ const clearRankingBtn = document.getElementById("clearRankingBtn");
 const playerNameInput = document.getElementById("playerNameInput");
 const difficultySelect = document.getElementById("difficultySelect");
 const menuNotice = document.getElementById("menuNotice");
+const gameWrap = document.querySelector(".game-wrap");
 
 const ui = new UISystem();
 const audio = new AudioSystem();
@@ -40,6 +41,17 @@ function hideMenu() {
 
 function showMenu() {
   menu.classList.remove("hidden");
+}
+
+function focusGameView() {
+  if (!gameWrap) {
+    return;
+  }
+
+  gameWrap.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
 }
 
 function ensureGame() {
@@ -73,6 +85,7 @@ function startGame(event) {
     activeGame.setPlayerName(playerNameInput.value);
     activeGame.setDifficulty(difficultySelect.value);
     activeGame.restart();
+    focusGameView();
   } catch (error) {
     console.error("[NeonRush] bootstrap/start error:", error);
     setMenuNotice(`No se pudo iniciar el juego: ${error.message}`);
@@ -84,6 +97,18 @@ input.bind({ mobileRoot: mobileControls, pauseBtn });
 ui.renderLeaderboard(leaderboard.getAll());
 
 startBtn.addEventListener("click", startGame);
+
+playerNameInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    startGame(event);
+  }
+});
+
+difficultySelect.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    startGame(event);
+  }
+});
 
 howBtn.addEventListener("click", () => {
   helpPanel.classList.remove("hidden");
