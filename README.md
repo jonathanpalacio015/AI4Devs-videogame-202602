@@ -1,5 +1,10 @@
 # Video game  | EN
 
+## Available games in this repository
+
+- `snake-EHS`: Snake reference implementation.
+- `pacman-JP`: Pac-Man Neon Rush MVP (procedural levels, adaptive ghosts, power-ups, responsive controls).
+
 As a final exercise in the introduction, use what you've learned to create a **video game** using HTML, CSS, and JavaScript.
 
 For reference, the development of a Snake game has been provided, but you are free to choose any other game concept that interests you.
@@ -26,6 +31,11 @@ We look forward to seeing your creativity in action and playing the amazing game
 
 
 # Videojuego  | ES
+
+## Juegos disponibles en este repositorio
+
+- `snake-EHS`: implementación de referencia de Snake.
+- `pacman-JP`: MVP de Pac-Man Neon Rush (niveles procedurales, fantasmas adaptativos, power-ups y controles responsive).
 
 Como ejercicio final de la introducción, usa lo aprendido para crear un **videojuego** con HTML, CSS y JavaScript.
 
