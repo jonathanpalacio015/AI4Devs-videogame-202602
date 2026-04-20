@@ -8,23 +8,26 @@ function keyFromPoint(point) {
 }
 
 function bfsNextDirection(start, target, game) {
-  if (start.x === target.x && start.y === target.y) {
+  const startNode = { x: game.wrapX(start.x), y: start.y };
+  const targetNode = { x: game.wrapX(target.x), y: target.y };
+
+  if (startNode.x === targetNode.x && startNode.y === targetNode.y) {
     return null;
   }
 
-  const queue = [start];
+  const queue = [startNode];
   let queueIndex = 0;
-  const visited = new Set([keyFromPoint(start)]);
+  const visited = new Set([keyFromPoint(startNode)]);
   const parent = new Map();
 
   while (queueIndex < queue.length) {
     const current = queue[queueIndex];
     queueIndex += 1;
 
-    if (current.x === target.x && current.y === target.y) {
+    if (current.x === targetNode.x && current.y === targetNode.y) {
       let trace = keyFromPoint(current);
       let prev = parent.get(trace);
-      while (prev && prev !== keyFromPoint(start)) {
+      while (prev && prev !== keyFromPoint(startNode)) {
         trace = prev;
         prev = parent.get(trace);
       }
@@ -36,7 +39,7 @@ function bfsNextDirection(start, target, game) {
     }
 
     for (const dir of CARDINALS) {
-      const nx = current.x + DIRS[dir].x;
+      const nx = game.wrapX(current.x + DIRS[dir].x);
       const ny = current.y + DIRS[dir].y;
       if (!game.isWalkable(nx, ny)) {
         continue;
