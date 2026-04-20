@@ -53,6 +53,7 @@ export class Game {
     this.deathAnim = null;  // { timer, x, y }
     this.victoryAnim = null; // { timer }
     this.frameCount = 0;
+    this.lastRenderTimestamp = 0;
 
     // Fixed 756x756 buffer – never changed so the canvas is never cleared by resize.
     this.canvas.width = 756;
@@ -139,7 +140,6 @@ export class Game {
   loop(timestamp) {
     try {
       this.frameCount += 1;
-      this.render();
 
       if (this.state === "running") {
         if (!this.lastTick) this.lastTick = timestamp;
@@ -148,6 +148,10 @@ export class Game {
         this.update(dt);
       } else {
         this.lastTick = timestamp; // keep lastTick current so no huge dt spike on resume
+      }
+
+      if (this.shouldRender(timestamp)) {
+        this.render();
       }
 
       // Animate death/victory overlays
@@ -173,6 +177,22 @@ export class Game {
       } catch (_) {}
     }
     requestAnimationFrame((ts) => this.loop(ts));
+  }
+
+  shouldRender(timestamp) {
+    // Full refresh while playing.
+    if (this.state === "running") {
+      this.lastRenderTimestamp = timestamp;
+      return true;
+    }
+
+    // Throttle render when not playing to reduce CPU/GPU load.
+    const intervalMs = (this.deathAnim || this.victoryAnim) ? 33 : 125;
+    if (!this.lastRenderTimestamp || timestamp - this.lastRenderTimestamp >= intervalMs) {
+      this.lastRenderTimestamp = timestamp;
+      return true;
+    }
+    return false;
   }
 
   getDebugSnapshot() {
