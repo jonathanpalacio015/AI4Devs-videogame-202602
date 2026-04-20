@@ -42,30 +42,29 @@
       </div>
     </section>
 
-    <section class="hud panel" aria-label="Estado de partida">
-      <div class="hud-item">
+    <section class="game-wrap panel" aria-label="Juego">
+      <canvas id="gameCanvas" width="756" height="756" aria-label="Campo de juego"></canvas>
+      <div id="overlay" class="overlay hidden" role="status" aria-live="polite">
+        <h3 id="overlayTitle">Sir-pac</h3>
+        <p id="overlayText">Pulsa jugar para empezar.</p>
+        <button id="overlayButton" class="btn btn-primary">Continuar</button>
+      </div>
+    </section>
+
+    <section class="game-bottom panel" aria-label="Estadísticas de partida">
+      <div class="gb-stat gb-score">
         <span>Puntaje</span>
         <strong id="scoreValue">0</strong>
       </div>
-      <div class="hud-item">
-        <span>Vidas</span>
-        <strong id="livesValue">3</strong>
+      <div class="gb-mini">
+        <div class="hud-item"><span>Vidas</span><strong id="livesValue">3</strong></div>
+        <div class="hud-item"><span>Nivel</span><strong id="levelValue">1</strong></div>
+        <div class="hud-item"><span>Estado</span><strong id="statusValue">Preparado</strong></div>
+        <div class="hud-item"><span>Top local</span><strong id="bestValue">0</strong></div>
       </div>
-      <div class="hud-item">
-        <span>Nivel</span>
-        <strong id="levelValue">1</strong>
-      </div>
-      <div class="hud-item">
+      <div class="gb-stat gb-timer">
         <span>Tiempo</span>
         <strong id="timerValue">2:00</strong>
-      </div>
-      <div class="hud-item">
-        <span>Estado</span>
-        <strong id="statusValue">Preparado</strong>
-      </div>
-      <div class="hud-item">
-        <span>Top local</span>
-        <strong id="bestValue">0</strong>
       </div>
     </section>
 
@@ -76,15 +75,6 @@
       </div>
       <div class="progress-track" role="progressbar" aria-label="Progreso del nivel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div id="progressFill" class="progress-fill"></div>
-      </div>
-    </section>
-
-    <section class="game-wrap panel" aria-label="Juego">
-      <canvas id="gameCanvas" width="756" height="756" aria-label="Campo de juego"></canvas>
-      <div id="overlay" class="overlay hidden" role="status" aria-live="polite">
-        <h3 id="overlayTitle">Sir-pac</h3>
-        <p id="overlayText">Pulsa jugar para empezar.</p>
-        <button id="overlayButton" class="btn btn-primary">Continuar</button>
       </div>
     </section>
 
