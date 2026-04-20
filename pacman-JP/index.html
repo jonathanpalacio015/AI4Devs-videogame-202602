@@ -37,8 +37,8 @@
         </div>
       </div>
       <div class="menu-actions">
-        <button id="startBtn" class="btn btn-primary">Jugar ahora</button>
-        <button id="howBtn" class="btn btn-secondary">Cómo jugar</button>
+        <button id="startBtn" type="button" class="btn btn-primary" onclick="window.__pacmanStart && window.__pacmanStart(event)">Jugar ahora</button>
+        <button id="howBtn" type="button" class="btn btn-secondary" onclick="window.__pacmanHow && window.__pacmanHow(event)">Cómo jugar</button>
       </div>
     </section>
 
@@ -91,7 +91,7 @@
         <button class="ctrl down" data-dir="down">▼</button>
         <button class="ctrl right" data-dir="right">▶</button>
       </div>
-      <button id="pauseBtn" class="btn btn-secondary">Pausa</button>
+      <button id="pauseBtn" type="button" class="btn btn-secondary">Pausa</button>
     </section>
 
     <section id="helpPanel" class="help panel hidden" aria-label="Instrucciones">
@@ -103,13 +103,13 @@
         <li>Power-ups: ralentizar fantasmas, teletransporte, escudo temporal.</li>
         <li>Fantasmas: Blinky persigue, Pinky embosca, Inky es impredecible y Clyde alterna caza/huida.</li>
       </ul>
-      <button id="closeHelpBtn" class="btn btn-secondary">Cerrar</button>
+      <button id="closeHelpBtn" type="button" class="btn btn-secondary">Cerrar</button>
     </section>
 
     <section class="leaderboard panel" aria-label="Ranking local">
       <div class="leaderboard-head">
         <h2>Top 5 local</h2>
-        <button id="clearRankingBtn" class="btn btn-secondary">Limpiar</button>
+        <button id="clearRankingBtn" type="button" class="btn btn-secondary">Limpiar</button>
       </div>
       <ol id="leaderboardList" class="leaderboard-list"></ol>
     </section>

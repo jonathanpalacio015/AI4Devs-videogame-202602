@@ -93,10 +93,22 @@ function startGame(event) {
   }
 }
 
+function openHowToPlay(event) {
+  event?.preventDefault();
+  helpPanel.classList.remove("hidden");
+}
+
+// Global fallbacks for inline onclick attributes in index.html
+window.__pacmanStart = startGame;
+window.__pacmanHow = openHowToPlay;
+
 input.bind({ mobileRoot: mobileControls, pauseBtn });
 ui.renderLeaderboard(leaderboard.getAll());
 
-startBtn.addEventListener("click", startGame);
+if (startBtn) {
+  startBtn.addEventListener("click", startGame);
+  startBtn.addEventListener("pointerup", startGame);
+}
 
 playerNameInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -110,19 +122,24 @@ difficultySelect.addEventListener("keydown", (event) => {
   }
 });
 
-howBtn.addEventListener("click", () => {
-  helpPanel.classList.remove("hidden");
-});
+if (howBtn) {
+  howBtn.addEventListener("click", openHowToPlay);
+  howBtn.addEventListener("pointerup", openHowToPlay);
+}
 
-closeHelpBtn.addEventListener("click", () => {
-  helpPanel.classList.add("hidden");
-});
+if (closeHelpBtn) {
+  closeHelpBtn.addEventListener("click", () => {
+    helpPanel.classList.add("hidden");
+  });
+}
 
-clearRankingBtn.addEventListener("click", () => {
-  leaderboard.clear();
-  ui.renderLeaderboard(leaderboard.getAll());
-  game?.updateHud();
-});
+if (clearRankingBtn) {
+  clearRankingBtn.addEventListener("click", () => {
+    leaderboard.clear();
+    ui.renderLeaderboard(leaderboard.getAll());
+    game?.updateHud();
+  });
+}
 
 setMenuNotice("Pulsa 'Jugar ahora' para cargar el laberinto.", "info");
 
