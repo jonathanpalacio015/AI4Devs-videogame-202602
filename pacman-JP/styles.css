@@ -236,9 +236,12 @@ h1 {
 }
 
 #gameCanvas {
-  width: min(92vw, 760px);
-  height: min(92vw, 760px);
+  /* Display size via CSS \u2013 buffer is fixed 756\xd7756 in JS, CSS scales it */
+  width: min(92vw, 756px);
+  height: min(92vw, 756px);
   max-height: 68vh;
+  image-rendering: -webkit-optimize-contrast; /* Safari */
+  image-rendering: crisp-edges;
   background:
     radial-gradient(circle at 50% 50%, #122643 0, #091422 80%),
     #081120;

@@ -1,10 +1,15 @@
-import { DIRS, POWERUP_COLORS, POWERUP_TYPES, TILE } from "./constants.js";
+import { BOARD_SIZE, DIRS, FRUIT_COLORS, FRUIT_TYPES, POWERUP_COLORS, POWERUP_TYPES, TILE } from "./constants.js";
 import { Ghost } from "./entities/ghost.js";
 import { Player } from "./entities/player.js";
 import { generateLevel } from "./maze.js";
 import { clamp, choice, distance, randInt } from "./utils.js";
 
-const GHOST_COLORS = ["#ff5e8f", "#7ef4ff", "#ffd447", "#c28fff"];
+const GHOST_PROFILES = [
+  { id: 0, name: "Blinky", role: "blinky", color: "#ff4f5e", scatterTarget: { x: 19, y: 1 } },
+  { id: 1, name: "Pinky", role: "pinky", color: "#ff8fc2", scatterTarget: { x: 1, y: 1 } },
+  { id: 2, name: "Inky", role: "inky", color: "#4be5ff", scatterTarget: { x: 19, y: 19 } },
+  { id: 3, name: "Clyde", role: "clyde", color: "#ffb347", scatterTarget: { x: 1, y: 19 } },
+];
 
 export class Game {
   constructor({ canvas, ui, audio, input, getBestScore = () => 0, onRunEnd = () => {} }) {
@@ -31,6 +36,9 @@ export class Game {
     this.powerUps = [];
     this.pelletRemaining = 0;
     this.totalPelletsInLevel = 1;
+    this.ghostHouseCenter = { x: 10, y: 10 };
+    this.bonusFruit = null;
+    this.fruitSpawnTimer = 0;
     this.player = null;
     this.ghosts = [];
 
@@ -40,7 +48,7 @@ export class Game {
     this.hitCooldown = 0;
 
     this.lastTick = 0;
-    this.cellPx = 32;
+    this.cellPx = 756 / BOARD_SIZE; // Fixed: buffer is always 756x756
     this.resizeObserver = null;
 
     this.resize();
@@ -55,21 +63,22 @@ export class Game {
         this.resizeObserver.observe(this.canvas.parentElement);
       }
     }
+    // Fixed 756x756 buffer – never changed so the canvas is never cleared by resize.
+    this.canvas.width = 756;
+    this.canvas.height = 756;
     this.setupLevel(this.level);
     this.render();
   }
 
-  resize() {
-    const dpr = window.devicePixelRatio || 1;
-    const cssSize = Math.min(this.canvas.clientWidth || 756, this.canvas.clientHeight || 756);
-    this.canvas.width = Math.floor(cssSize * dpr);
-    this.canvas.height = Math.floor(cssSize * dpr);
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  /** Returns the CSS display side-length of the canvas in pixels. */
+  getDisplaySize() {
+    const s = this.canvas.offsetWidth || this.canvas.clientWidth || 756;
+    return s > 10 ? s : 756;
+  }
 
-    if (this.grid.length > 0) {
-      this.cellPx = cssSize / this.grid.length;
-      this.render();
-    }
+  resize() {
+    // Buffer stays fixed at 756x756. cellPx is always 756/BOARD_SIZE.
+    // Nothing to do here – kept for ResizeObserver compatibility.
   }
 
   setupLevel(level) {
@@ -78,12 +87,17 @@ export class Game {
     this.powerUps = data.powerUps;
     this.pelletRemaining = data.pelletCount;
     this.totalPelletsInLevel = Math.max(1, data.pelletCount);
+    this.ghostHouseCenter = data.ghostHouseCenter;
+    this.bonusFruit = null;
+    this.fruitSpawnTimer = this.nextFruitSpawnTimer();
 
     this.player = new Player(data.playerSpawn);
-    this.ghosts = data.ghostSpawns.map((spawn, idx) => new Ghost(spawn, GHOST_COLORS[idx % GHOST_COLORS.length], idx));
+    this.ghosts = data.ghostSpawns.map((spawn, idx) => {
+      const profile = GHOST_PROFILES[idx % GHOST_PROFILES.length];
+      return new Ghost(spawn, profile, this.ghostHouseCenter);
+    });
 
-    const cssSize = Math.min(this.canvas.clientWidth || 756, this.canvas.clientHeight || 756);
-    this.cellPx = cssSize / this.grid.length;
+    this.cellPx = 756 / BOARD_SIZE;
     this.statusText = `En juego (${this.difficulty})`;
     this.ghostSlowTimer = 0;
     this.frightTimer = 0;
@@ -125,21 +139,25 @@ export class Game {
   }
 
   loop(timestamp) {
-    if (this.state !== "running") {
-      this.render();
-      requestAnimationFrame((ts) => this.loop(ts));
-      return;
-    }
+    try {
+      if (this.state !== "running") {
+        this.render();
+        requestAnimationFrame((ts) => this.loop(ts));
+        return;
+      }
 
-    if (!this.lastTick) {
+      if (!this.lastTick) {
+        this.lastTick = timestamp;
+      }
+
+      const dt = clamp((timestamp - this.lastTick) / 1000, 0, 0.04);
       this.lastTick = timestamp;
+
+      this.update(dt);
+      this.render();
+    } catch (err) {
+      console.error("[NeonRush] loop error:", err);
     }
-
-    const dt = clamp((timestamp - this.lastTick) / 1000, 0, 0.04);
-    this.lastTick = timestamp;
-
-    this.update(dt);
-    this.render();
     requestAnimationFrame((ts) => this.loop(ts));
   }
 
@@ -160,6 +178,7 @@ export class Game {
     this.frightTimer = Math.max(0, this.frightTimer - dt);
     this.shieldTimer = Math.max(0, this.shieldTimer - dt);
     this.hitCooldown = Math.max(0, this.hitCooldown - dt);
+    this.updateBonusFruit(dt);
 
     this.player.update(dt, this);
     this.consumeCollectibles();
@@ -167,9 +186,20 @@ export class Game {
     for (const ghost of this.ghosts) {
       const baseAggression = this.getAggressionFactor();
       const slowFactor = this.ghostSlowTimer > 0 ? 0.66 : 1;
-      const frightFactor = this.frightTimer > 0 ? 0.82 : 1;
-      ghost.speed = ghost.baseSpeed * baseAggression * slowFactor * frightFactor;
+
+      if (ghost.mode !== "regenerating") {
+        ghost.setMode(this.frightTimer > 0 ? "vulnerable" : "normal");
+      }
+
+      const modeFactor = ghost.mode === "vulnerable" ? 0.82 : ghost.mode === "regenerating" ? 1.18 : 1;
+      ghost.speed = ghost.baseSpeed * baseAggression * slowFactor * modeFactor;
       ghost.update(dt, this);
+
+      if (ghost.mode === "regenerating" && distance(ghost, this.ghostHouseCenter) < 0.6) {
+        ghost.x = this.ghostHouseCenter.x;
+        ghost.y = this.ghostHouseCenter.y;
+        ghost.finishRegeneration(this.frightTimer > 0 ? "vulnerable" : "normal");
+      }
     }
 
     this.resolveCollisions();
@@ -222,10 +252,12 @@ export class Game {
     this.lives = 3;
     this.level = 1;
     this.elapsed = 0;
+    this.resize();
     this.setupLevel(this.level);
     this.state = "running";
     this.lastTick = 0;
     this.ui.hideOverlay();
+    this.render();
     this.updateHud();
     requestAnimationFrame((ts) => this.loop(ts));
   }
@@ -290,6 +322,53 @@ export class Game {
         this.audio.powerUp();
       }
     }
+
+    if (this.bonusFruit?.active && this.bonusFruit.x === tx && this.bonusFruit.y === ty) {
+      this.score += this.bonusFruit.points;
+      this.statusText = "Bonus de fruta";
+      this.bonusFruit.active = false;
+      this.fruitSpawnTimer = this.nextFruitSpawnTimer();
+      this.audio.powerUp();
+    }
+  }
+
+  nextFruitSpawnTimer() {
+    return randInt(11, 19);
+  }
+
+  updateBonusFruit(dt) {
+    if (this.bonusFruit?.active) {
+      this.bonusFruit.timeLeft -= dt;
+      this.bonusFruit.pulse += dt * 10;
+      if (this.bonusFruit.timeLeft <= 0) {
+        this.bonusFruit.active = false;
+        this.fruitSpawnTimer = this.nextFruitSpawnTimer();
+      }
+      return;
+    }
+
+    this.fruitSpawnTimer -= dt;
+    if (this.fruitSpawnTimer > 0) {
+      return;
+    }
+
+    const cx = this.ghostHouseCenter.x;
+    const cy = this.ghostHouseCenter.y;
+    if (!this.isWalkable(cx, cy)) {
+      this.fruitSpawnTimer = this.nextFruitSpawnTimer();
+      return;
+    }
+
+    this.bonusFruit = {
+      type: FRUIT_TYPES.CHERRY,
+      x: cx,
+      y: cy,
+      points: 140 + this.level * 20,
+      timeLeft: 8,
+      pulse: 0,
+      active: true,
+    };
+    this.statusText = "Fruta bonus en el centro";
   }
 
   activatePowerUp(type) {
@@ -339,14 +418,18 @@ export class Game {
     }
 
     for (const ghost of this.ghosts) {
+      if (ghost.mode === "regenerating") {
+        continue;
+      }
+
       const d = distance(this.player, ghost);
       if (d > 0.55) {
         continue;
       }
 
-      if (this.frightTimer > 0) {
+      if (ghost.mode === "vulnerable") {
         this.score += 200;
-        ghost.reset();
+        ghost.startRegeneration();
         this.audio.powerUp();
         this.statusText = "Fantasma capturado";
         this.hitCooldown = 0.25;
@@ -355,7 +438,7 @@ export class Game {
 
       if (this.shieldTimer > 0) {
         this.score += 40;
-        ghost.reset();
+        ghost.startRegeneration();
         this.statusText = "Escudo activo";
         this.hitCooldown = 0.25;
         return;
@@ -395,31 +478,46 @@ export class Game {
 
   getGhostTarget(ghost) {
     const playerTile = { x: Math.round(this.player.x), y: Math.round(this.player.y) };
-    const cornerTargets = [
-      { x: 1, y: 1 },
-      { x: this.grid.length - 2, y: 1 },
-      { x: 1, y: this.grid.length - 2 },
-      { x: this.grid.length - 2, y: this.grid.length - 2 },
-    ];
 
-    if (this.frightTimer > 0) {
-      return cornerTargets[(ghost.id + randInt(0, 3)) % cornerTargets.length];
+    if (ghost.mode === "regenerating") {
+      return this.ghostHouseCenter;
     }
 
-    const aggression = this.getAggressionFactor();
-    if (aggression > 1.35) {
-      const prediction = DIRS[this.player.dir] || { x: 0, y: 0 };
-      return {
-        x: clamp(playerTile.x + prediction.x * 2, 1, this.grid.length - 2),
-        y: clamp(playerTile.y + prediction.y * 2, 1, this.grid.length - 2),
-      };
+    if (ghost.mode === "vulnerable") {
+      return ghost.scatterTarget;
     }
 
-    if (ghost.id % 2 === 0) {
+    if (ghost.role === "blinky") {
       return playerTile;
     }
 
-    return cornerTargets[(ghost.id + this.level) % cornerTargets.length];
+    if (ghost.role === "pinky") {
+      const prediction = DIRS[this.player.dir] || { x: 0, y: 0 };
+      return {
+        x: clamp(playerTile.x + prediction.x * 4, 1, this.grid.length - 2),
+        y: clamp(playerTile.y + prediction.y * 4, 1, this.grid.length - 2),
+      };
+    }
+
+    if (ghost.role === "inky") {
+      const prediction = DIRS[this.player.dir] || { x: 0, y: 0 };
+      const lead = {
+        x: clamp(playerTile.x + prediction.x * 2, 1, this.grid.length - 2),
+        y: clamp(playerTile.y + prediction.y * 2, 1, this.grid.length - 2),
+      };
+      const blinky = this.ghosts.find((g) => g.role === "blinky") || this.ghosts[0];
+      return {
+        x: clamp(lead.x + (lead.x - Math.round(blinky.x)), 1, this.grid.length - 2),
+        y: clamp(lead.y + (lead.y - Math.round(blinky.y)), 1, this.grid.length - 2),
+      };
+    }
+
+    if (ghost.role === "clyde") {
+      const d = Math.hypot(playerTile.x - ghost.x, playerTile.y - ghost.y);
+      return d <= 5.5 ? ghost.scatterTarget : playerTile;
+    }
+
+    return playerTile;
   }
 
   getAggressionFactor() {
@@ -476,9 +574,7 @@ export class Game {
   }
 
   renderBoard() {
-    const size = this.grid.length;
-    const side = size * this.cellPx;
-    this.ctx.clearRect(0, 0, side, side);
+    this.ctx.clearRect(0, 0, 756, 756);
 
     for (let y = 0; y < size; y += 1) {
       for (let x = 0; x < size; x += 1) {
@@ -509,6 +605,21 @@ export class Game {
       this.ctx.beginPath();
       this.ctx.arc((item.x + 0.5) * this.cellPx, (item.y + 0.5) * this.cellPx, radius, 0, Math.PI * 2);
       this.ctx.fill();
+    }
+
+    if (this.bonusFruit?.active) {
+      const cx = (this.bonusFruit.x + 0.5) * this.cellPx;
+      const cy = (this.bonusFruit.y + 0.5) * this.cellPx;
+      const radius = this.cellPx * (0.24 + Math.sin(this.bonusFruit.pulse) * 0.02);
+      this.ctx.fillStyle = FRUIT_COLORS[this.bonusFruit.type];
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.strokeStyle = "#ffdbe0";
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, radius + 1.5, 0, Math.PI * 2);
+      this.ctx.stroke();
     }
   }
 
@@ -547,7 +658,13 @@ export class Game {
       const cy = (ghost.y + 0.5) * this.cellPx;
       const r = this.cellPx * 0.33;
 
-      this.ctx.fillStyle = this.frightTimer > 0 ? "#7ca8ff" : ghost.color;
+      if (ghost.mode === "regenerating") {
+        this.ctx.fillStyle = "#d8e9ff";
+      } else if (ghost.mode === "vulnerable") {
+        this.ctx.fillStyle = "#7ca8ff";
+      } else {
+        this.ctx.fillStyle = ghost.color;
+      }
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
       this.ctx.rect(cx - r, cy, r * 2, r);
