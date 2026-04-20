@@ -52,7 +52,6 @@ export class Game {
     this.loopRunning = false; // guard against multiple RAF loops
     this.deathAnim = null;  // { timer, x, y }
     this.victoryAnim = null; // { timer }
-    this.frameCount = 0;
     this.lastRenderTimestamp = 0;
     this.idleLoopDelayMs = 90;
 
@@ -140,8 +139,6 @@ export class Game {
 
   loop(timestamp) {
     try {
-      this.frameCount += 1;
-
       if (this.state === "running") {
         if (!this.lastTick) this.lastTick = timestamp;
         const dt = clamp((timestamp - this.lastTick) / 1000, 0, 0.04);
@@ -206,19 +203,6 @@ export class Game {
       return true;
     }
     return false;
-  }
-
-  getDebugSnapshot() {
-    return {
-      state: this.state,
-      statusText: this.statusText,
-      playerReady: Boolean(this.player),
-      ghostCount: this.ghosts?.length || 0,
-      loopRunning: this.loopRunning,
-      frameCount: this.frameCount,
-      level: this.level,
-      score: this.score,
-    };
   }
 
   update(dt) {

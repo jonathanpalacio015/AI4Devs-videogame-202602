@@ -449,7 +449,6 @@
       this.loopRunning = false;
       this.deathAnim = null;
       this.victoryAnim = null;
-      this.frameCount = 0;
       this.lastRenderTimestamp = 0;
       this.idleLoopDelayMs = 90;
       this.canvas.width = 756;
@@ -520,7 +519,6 @@
     }
     loop(timestamp) {
       try {
-        this.frameCount += 1;
         if (this.state === "running") {
           if (!this.lastTick) this.lastTick = timestamp;
           const dt = clamp((timestamp - this.lastTick) / 1e3, 0, 0.04);
@@ -575,19 +573,6 @@
         return true;
       }
       return false;
-    }
-    getDebugSnapshot() {
-      var _a;
-      return {
-        state: this.state,
-        statusText: this.statusText,
-        playerReady: Boolean(this.player),
-        ghostCount: ((_a = this.ghosts) == null ? void 0 : _a.length) || 0,
-        loopRunning: this.loopRunning,
-        frameCount: this.frameCount,
-        level: this.level,
-        score: this.score
-      };
     }
     update(dt) {
       this.elapsed += dt;
@@ -1331,76 +1316,8 @@
   var audio = new AudioSystem();
   var input = new InputSystem();
   var leaderboard = new LeaderboardSystem(5);
-  var DIAG_MODE = new URLSearchParams(window.location.search).get("diag") === "1";
   var game = null;
   var started = false;
-  var clickCount = 0;
-  var startAttempts = 0;
-  var lastError = "none";
-  function createDiagPanel() {
-    if (!DIAG_MODE) {
-      return null;
-    }
-    const panel = document.createElement("aside");
-    panel.id = "diagPanel";
-    panel.setAttribute("aria-live", "polite");
-    panel.style.position = "fixed";
-    panel.style.right = "8px";
-    panel.style.bottom = "8px";
-    panel.style.zIndex = "99999";
-    panel.style.width = "min(92vw, 360px)";
-    panel.style.maxHeight = "42vh";
-    panel.style.overflow = "auto";
-    panel.style.padding = "8px 10px";
-    panel.style.borderRadius = "10px";
-    panel.style.border = "1px solid rgba(255,79,140,0.45)";
-    panel.style.background = "rgba(4,10,22,0.92)";
-    panel.style.color = "#f4f7ff";
-    panel.style.font = "12px/1.35 monospace";
-    panel.textContent = "DIAG booting...";
-    document.body.append(panel);
-    return panel;
-  }
-  var diagPanel = createDiagPanel();
-  function getSnapshot() {
-    var _a, _b, _c;
-    const snap = (_a = game == null ? void 0 : game.getDebugSnapshot) == null ? void 0 : _a.call(game);
-    return {
-      state: (snap == null ? void 0 : snap.state) || "no-game",
-      playerReady: Boolean(snap == null ? void 0 : snap.playerReady),
-      ghostCount: (_b = snap == null ? void 0 : snap.ghostCount) != null ? _b : 0,
-      frameCount: (_c = snap == null ? void 0 : snap.frameCount) != null ? _c : 0,
-      statusText: (snap == null ? void 0 : snap.statusText) || "n/a",
-      loopRunning: Boolean(snap == null ? void 0 : snap.loopRunning)
-    };
-  }
-  function paintDiag(reason = "tick") {
-    if (!DIAG_MODE || !diagPanel) return;
-    const s = getSnapshot();
-    const menuVisible = menu ? !menu.classList.contains("hidden") : false;
-    diagPanel.textContent = [
-      "DIAG MODE ON",
-      `reason=${reason}`,
-      `clicks=${clickCount} startAttempts=${startAttempts}`,
-      `menuVisible=${menuVisible} started=${started}`,
-      `state=${s.state} loop=${s.loopRunning} frame=${s.frameCount}`,
-      `playerReady=${s.playerReady} ghosts=${s.ghostCount}`,
-      `status=${s.statusText}`,
-      `lastError=${lastError}`
-    ].join("\n");
-  }
-  if (DIAG_MODE) {
-    window.addEventListener("error", (event) => {
-      lastError = `${event.message} @${event.filename}:${event.lineno}`;
-      paintDiag("window.error");
-    });
-    window.addEventListener("unhandledrejection", (event) => {
-      var _a;
-      const reason = ((_a = event.reason) == null ? void 0 : _a.message) || String(event.reason);
-      lastError = `promise: ${reason}`;
-      paintDiag("unhandledrejection");
-    });
-  }
   function setMenuNotice(message = "", tone = "error") {
     if (!menuNotice) {
       return;
@@ -1426,7 +1343,6 @@
   }
   function ensureGame() {
     if (game) {
-      paintDiag("ensureGame.cached");
       return game;
     }
     game = new Game({
@@ -1440,15 +1356,11 @@
         ui.renderLeaderboard(leaderboard.getAll());
       }
     });
-    paintDiag("ensureGame.created");
     return game;
   }
   function startGame(event) {
     event == null ? void 0 : event.preventDefault();
-    startAttempts += 1;
-    paintDiag("startGame.called");
     if (started) {
-      paintDiag("startGame.already-started");
       return;
     }
     try {
@@ -1461,36 +1373,22 @@
       activeGame.setPlayerName(playerNameInput.value);
       activeGame.setDifficulty(difficultySelect.value);
       activeGame.restart();
-      paintDiag("startGame.success");
       focusGameView();
     } catch (error) {
       started = false;
       console.error("[NeonRush] bootstrap/start error:", error);
       setMenuNotice(`No se pudo iniciar el juego: ${error.message}`);
       showMenu();
-      lastError = (error == null ? void 0 : error.stack) || (error == null ? void 0 : error.message) || String(error);
-      paintDiag("startGame.error");
     }
   }
   function openHowToPlay(event) {
     event == null ? void 0 : event.preventDefault();
     helpPanel.classList.remove("hidden");
   }
-  window.__pacmanStart = startGame;
-  window.__pacmanHow = openHowToPlay;
-  if (DIAG_MODE) {
-    document.addEventListener("pointerdown", () => {
-      clickCount += 1;
-      paintDiag("pointerdown");
-    }, { capture: true });
-  }
   input.bind({ mobileRoot: mobileControls, pauseBtn });
   ui.renderLeaderboard(leaderboard.getAll());
   if (startBtn) {
     startBtn.addEventListener("click", startGame);
-    if (DIAG_MODE) {
-      startBtn.addEventListener("pointerdown", () => paintDiag("startBtn.pointerdown"));
-    }
   }
   playerNameInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -1504,9 +1402,6 @@
   });
   if (howBtn) {
     howBtn.addEventListener("click", openHowToPlay);
-    if (DIAG_MODE) {
-      howBtn.addEventListener("pointerdown", () => paintDiag("howBtn.pointerdown"));
-    }
   }
   if (closeHelpBtn) {
     closeHelpBtn.addEventListener("click", () => {
@@ -1524,14 +1419,8 @@
   try {
     ensureGame();
     setMenuNotice("Pulsa 'Jugar ahora' para iniciar la partida.", "info");
-    paintDiag("preload.success");
   } catch (error) {
     console.error("[NeonRush] preload error:", error);
     setMenuNotice(`Carga inicial incompleta: ${error.message}`);
-    lastError = (error == null ? void 0 : error.stack) || (error == null ? void 0 : error.message) || String(error);
-    paintDiag("preload.error");
-  }
-  if (DIAG_MODE) {
-    setInterval(() => paintDiag("heartbeat"), 1e3);
   }
 })();
