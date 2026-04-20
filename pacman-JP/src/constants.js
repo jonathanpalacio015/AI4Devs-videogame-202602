@@ -29,10 +29,18 @@ export const POWERUP_TYPES = {
   SHIELD: "shield",
 };
 
+export const FRUIT_TYPES = {
+  CHERRY: "cherry",
+};
+
 export const POWERUP_COLORS = {
   [POWERUP_TYPES.SLOW]: "#7ef4ff",
   [POWERUP_TYPES.TELEPORT]: "#ffd447",
   [POWERUP_TYPES.SHIELD]: "#99ff7f",
+};
+
+export const FRUIT_COLORS = {
+  [FRUIT_TYPES.CHERRY]: "#ff4f5e",
 };
 
 export const BOARD_SIZE = 21;

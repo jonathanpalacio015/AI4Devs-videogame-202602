@@ -6,8 +6,21 @@ export class InputSystem {
     this.pauseRequested = false;
   }
 
+  isEditableTarget(target) {
+    if (!target) {
+      return false;
+    }
+
+    const tag = target.tagName;
+    return target.isContentEditable || tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  }
+
   bind({ mobileRoot, pauseBtn }) {
     window.addEventListener("keydown", (event) => {
+      if (this.isEditableTarget(event.target)) {
+        return;
+      }
+
       if (DIR_KEYS[event.code]) {
         this.currentDir = DIR_KEYS[event.code];
         event.preventDefault();

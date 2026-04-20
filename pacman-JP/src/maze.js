@@ -173,6 +173,7 @@ export function generateLevel(level = 1) {
     grid,
     playerSpawn,
     ghostSpawns,
+    ghostHouseCenter: ghostCenter,
     powerUps,
     pelletCount,
   };
