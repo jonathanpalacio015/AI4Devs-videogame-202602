@@ -24,6 +24,7 @@ const input = new InputSystem();
 const leaderboard = new LeaderboardSystem(5);
 
 let game = null;
+let started = false;
 
 function setMenuNotice(message = "", tone = "error") {
   if (!menuNotice) {
@@ -75,9 +76,13 @@ function ensureGame() {
 
 function startGame(event) {
   event?.preventDefault();
+  if (started) {
+    return;
+  }
 
   try {
     const activeGame = ensureGame();
+    started = true;
     setMenuNotice("");
     helpPanel.classList.add("hidden");
     hideMenu();
@@ -87,6 +92,7 @@ function startGame(event) {
     activeGame.restart();
     focusGameView();
   } catch (error) {
+    started = false;
     console.error("[NeonRush] bootstrap/start error:", error);
     setMenuNotice(`No se pudo iniciar el juego: ${error.message}`);
     showMenu();
@@ -145,8 +151,15 @@ setMenuNotice("Pulsa 'Jugar ahora' para cargar el laberinto.", "info");
 
 try {
   ensureGame();
-  setMenuNotice("");
+  setMenuNotice("Pulsa 'Jugar ahora'. Si no responde, el juego iniciará automáticamente.", "info");
 } catch (error) {
   console.error("[NeonRush] preload error:", error);
   setMenuNotice(`Carga inicial incompleta: ${error.message}`);
 }
+
+// Fallback: if the menu is still visible after a short delay, auto-start the run.
+setTimeout(() => {
+  if (!started && menu && !menu.classList.contains("hidden")) {
+    startGame();
+  }
+}, 1200);

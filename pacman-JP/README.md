@@ -57,11 +57,12 @@ Estructura modular:
 Validaciones técnicas aplicadas en esta iteración:
 
 - Sin errores de análisis en HTML, CSS y JavaScript de los archivos principales.
-- Escalado dinámico del canvas con `ResizeObserver`, `resize` y `orientationchange`.
+- Render estable con canvas buffer fijo `756x756` y escalado visual mediante CSS (patrón recomendado para navegadores desktop/mobile).
 - Breakpoints específicos:
   - Mobile: <= 820px (controles táctiles visibles, botones ampliados, canvas ajustado).
   - Tablet: 981px-1199px (HUD en 3 columnas y canvas optimizado).
   - Desktop: >= 1200px (layout en dos columnas para juego + paneles).
+- Ejecución en navegador responsivo (desktop y celulares) sin build step, vía servidor estático o apertura directa del `index.html`.
 
 Matriz sugerida de prueba manual rápida:
 
