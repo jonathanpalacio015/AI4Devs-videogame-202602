@@ -730,6 +730,4 @@ export class Game {
       this.ctx.fillRect(0, 0, 756, 756);
     }
   }
-    }
-  }
 }
